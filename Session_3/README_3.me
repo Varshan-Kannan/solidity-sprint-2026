@@ -1,0 +1,143 @@
+# Session 03
+
+Improve the student record contract by adding ownership control, events, and an interface.
+
+**Name:** Varshan R K
+**Enrolment ID:** AU24UG040
+**Date submitted:** 18/09/2026
+
+## Contract
+
+* `StudentRecord.sol`
+
+## 1. Overview
+
+This version of the student record contract builds on the previous student registry by introducing additional Solidity features.
+
+The contract now uses OpenZeppelin's `Ownable` contract for access control, events to record important actions, and an interface called `IStudentRecord` to define the structure of the student lookup function.
+
+Student records contain a name, enrolment ID, and status. Registration is protected against duplicate addresses, while changing a student's status is restricted to the contract owner.
+
+## 2. Main components
+
+### Student status
+
+The contract uses an enum with three possible values:
+
+```solidity
+enum Status {
+    Active,
+    Inactive,
+    Graduated
+}
+```
+
+Each student is stored using the `Student` struct:
+
+```solidity
+struct Student {
+    string name;
+    uint256 enrolmentId;
+    Status status;
+}
+```
+
+The student data and registration status are maintained using two mappings.
+
+## 3. Interface
+
+I created the `IStudentRecord` interface to define the `getStudent()` function that can be used to retrieve a student's information.
+
+```solidity
+interface IStudentRecord {
+    function getStudent(address studentAddress)
+        external
+        view
+        returns (
+            string memory,
+            uint256,
+            uint8
+        );
+}
+```
+
+The main contract implements this interface:
+
+```solidity
+contract StudentRecord is IStudentRecord, Ownable
+```
+
+The `override` keyword is used in `getStudent()` because the function is implementing the function declared in the interface.
+
+The status is converted to `uint8` when returned so that it matches the return type specified by the interface.
+
+## 4. Access control
+
+I used OpenZeppelin's `Ownable` contract rather than creating the ownership system manually.
+
+The constructor initializes the contract owner using:
+
+```solidity
+constructor() Ownable(msg.sender) {}
+```
+
+This makes the deploying account the initial owner.
+
+The `updateStatus()` function uses:
+
+```solidity
+onlyOwner
+```
+
+Therefore, only the contract owner can change the status of a registered student.
+
+## 5. Custom modifier
+
+I also created a modifier called `Alreadyregistered` to prevent duplicate registrations.
+
+```solidity
+modifier Alreadyregistered(address studentaddress) {
+    require(
+        !isRegistered[studentaddress],
+        "Student already registered"
+    );
+    _;
+}
+```
+
+The modifier is applied to `registerStudent()`.
+
+Before a new student is added, the contract checks whether the supplied address has already been registered. If it has, the transaction is rejected.
+
+## 6. Events
+
+Two events are included in the contract:
+
+```solidity
+event Registered(string name, uint256 enrolmentId);
+event update(Status newStatus);
+```
+
+The `Registered` event is emitted whenever a new student is successfully added.
+
+The `update` event is emitted when the owner changes the status of an existing student.
+
+Events provide a way for applications or other off-chain systems to observe important contract activity without changing the stored data.
+
+## 7. Deployment
+
+* **Network:** Remix VM
+* **Contract:** `StudentRecord`
+* **Contract address:** [Enter your deployed contract address]
+* **Transaction hash:** [Enter transaction hash if required]
+* **Block hash:** [Enter block hash if applicable]
+
+## 8. Testing
+
+I tested the contract using the following sequence:
+
+1. Deploy `StudentRecord` and verify that the deploying account is the owner.
+2. Register a student address with a name and enrolment ID.
+3. Confirm that the `Registered` event is generated.
+4. Try registering the same address again → the transaction should revert with `"Student already registered"`.
+5. Call `getStudent()` for the registered address → verify the name, enro
